@@ -7,7 +7,7 @@ use crate::sys::{
     self,
     defs::AsBytes,
     fcntl::{omode, FcntlCmd},
-    fs::DirEnt,
+    fs::{DirEnt},
     stat::FileType,
     stat::Stat,
     Error::*,
@@ -336,6 +336,10 @@ pub fn create_dir<P: AsRef<Path>>(path: P) -> sys::Result<()> {
 
 pub fn hard_link<P: AsRef<Path>, Q: AsRef<Path>>(original: P, link: Q) -> sys::Result<()> {
     sys::link(original.as_ref().to_str(), link.as_ref().to_str())
+}
+
+pub fn create_file<P: AsRef<Path>>(path: P) -> sys::Result<()> {
+    sys::mkfile(path.as_ref().to_str())
 }
 
 pub fn remove_file<P: AsRef<Path>>(path: P) -> sys::Result<()> {

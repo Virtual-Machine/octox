@@ -59,6 +59,14 @@ name = "_sh"
 path = "sh.rs"
 
 [[bin]]
+name = "_shutdown"
+path = "shutdown.rs"
+
+[[bin]]
+name = "_touch"
+path = "touch.rs"
+
+[[bin]]
 name = "_wc"
 path = "wc.rs"
 

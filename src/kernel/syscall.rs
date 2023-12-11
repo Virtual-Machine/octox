@@ -10,6 +10,7 @@ use crate::{
     file::{FType, File, FTABLE},
     fs::{self, Path},
     log::LOG,
+    memlayout::{OFF_SWITCH, OFF_SWITCH_VALUE},
     param::{MAXARG, MAXPATH},
     pipe::Pipe,
     proc::*,
@@ -24,7 +25,7 @@ use core::mem::variant_count;
 #[cfg(all(target_os = "none", feature = "kernel"))]
 use core::mem::{size_of, size_of_val};
 #[cfg(all(target_os = "none", feature = "kernel"))]
-use core::{concat, str};
+use core::{concat, str, ptr};
 
 #[derive(Copy, Clone, Debug)]
 #[repr(usize)]
@@ -52,6 +53,8 @@ pub enum SysCalls {
     Close = 21,
     Dup2 = 22,
     Fcntl = 23,
+    Mkfile = 24,
+    Shutdown = 25,
     Invalid = 0,
 }
 
@@ -102,6 +105,8 @@ impl SysCalls {
         (Fn::U(Self::close), "(fd: usize)"),               // Release open file fd.
         (Fn::I(Self::dup2), "(src: usize, dst: usize)"),   //
         (Fn::I(Self::fcntl), "(fd: usize, cmd: FcntlCmd)"), //
+        (Fn::U(Self::mkfile), "(path: &str)"), // Create a new file.
+        (Fn::U(Self::shutdown), "()"), // Turn off qemu system by command.
     ];
     pub fn invalid() -> ! {
         unimplemented!()
@@ -341,7 +346,12 @@ impl SysCalls {
         #[cfg(all(target_os = "none", feature = "kernel"))]
         {
             let pid = argraw(0);
-            kill(pid)
+            if pid != 0 {
+                kill(pid)
+            } else {
+                println!("You can't kill the init process unless you want problems...");
+                Ok(())
+            }
         }
     }
     pub fn uptime() -> Result<usize> {
@@ -350,6 +360,16 @@ impl SysCalls {
         #[cfg(all(target_os = "none", feature = "kernel"))]
         {
             Ok(*TICKS.lock())
+        }
+    }
+
+    pub fn shutdown() -> Result<()> {
+        #[cfg(not(all(target_os = "none", feature = "kernel")))]
+        return Ok(());
+        #[cfg(all(target_os = "none", feature = "kernel"))]
+        {
+            unsafe { ptr::write_volatile(OFF_SWITCH as *mut u32, OFF_SWITCH_VALUE) }
+            Ok(())
         }
     }
 }
@@ -511,6 +531,23 @@ impl SysCalls {
             res
         }
     }
+    pub fn mkfile() -> Result<()> {
+        #[cfg(not(all(target_os = "none", feature = "kernel")))]
+        return Ok(());
+        #[cfg(all(target_os = "none", feature = "kernel"))]
+        {
+            let mut path = [0u8; MAXPATH];
+            let path = Path::from_arg(0, &mut path)?;
+
+            let res;
+            {
+                LOG.begin_op();
+                res = fs::create(path, FileType::File, 0, 0).and(Ok(()));
+                LOG.end_op();
+            }
+            res
+        }
+    }
     pub fn mknod() -> Result<()> {
         #[cfg(not(all(target_os = "none", feature = "kernel")))]
         return Ok(());
@@ -649,6 +686,8 @@ impl SysCalls {
             21 => Self::Close,
             22 => Self::Dup2,
             23 => Self::Fcntl,
+            24 => Self::Mkfile,
+            25 => Self::Shutdown,
             _ => Self::Invalid,
         }
     }

@@ -1,7 +1,7 @@
 use crate::defs::AsBytes;
 use crate::error::{Error::*, Result};
 use crate::memlayout::{
-    KERNBASE, PHYSTOP, PLIC, STACK_PAGE_NUM, TRAMPOLINE, TRAPFRAME, UART0, VIRTIO0,
+    KERNBASE, PHYSTOP, PLIC, STACK_PAGE_NUM, TRAMPOLINE, TRAPFRAME, UART0, VIRTIO0, OFF_SWITCH
 };
 use crate::proc::PROCS;
 use crate::riscv::{pgroundup, pteflags::*, registers::satp, sfence_vma, PGSHIFT, PGSIZE};
@@ -655,6 +655,10 @@ impl Kvm {
         }
     }
     unsafe fn make(&mut self) {
+        // Map off switch
+        self.map(OFF_SWITCH.into(), OFF_SWITCH.into(), PGSIZE, PTE_R | PTE_W);
+
+        // Map uart
         self.map(UART0.into(), UART0.into(), PGSIZE, PTE_R | PTE_W);
 
         // virtio mmio disk interface

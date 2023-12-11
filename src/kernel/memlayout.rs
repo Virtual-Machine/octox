@@ -19,6 +19,10 @@ use crate::vm::{KVAddr, VAddr};
 // end -- start of kernel page allocation area
 // PHYSTOP -- end RAM used by the kernel
 
+// Special QEMU Offswitch
+pub const OFF_SWITCH: usize = 0x10_0000;
+pub const OFF_SWITCH_VALUE: u32 = 0x5555;
+
 // qemu puts UART registers here in physical memory.
 pub const UART0: usize = 0x1000_0000;
 pub const UART0_IRQ: u32 = 10;
